@@ -5,17 +5,21 @@ jobs:
     runs-on: windows-latest
     steps:
       - name: Check out git repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4  # 升级到 v4
+
       - name: Install Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4  # 升级到 v4
         with:
           node-version: 18
+
       - name: Install dependencies
         run: npm install
+
       - name: Build and Package
         run: npm run dist
+
       - name: Upload Executable
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4  # 核心修复点：必须是 v4
         with:
           name: StarDominion-Windows
           path: dist/*.exe

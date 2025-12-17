@@ -2,10 +2,10 @@
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>星际主宰 - 桌面专业版</title>
+    <title>星际主宰 - 最终专业版</title>
     <style>
         body { margin: 0; background: #000; overflow: hidden; font-family: 'Segoe UI', sans-serif; }
-        #ui-layer { position: fixed; inset: 0; pointer-events: none; color: #0cf; padding: 20px; z-index: 10; }
+        #ui-layer { position: fixed; inset: 0; pointer-events: none; color: #0cf; padding: 20px; z-index: 10; text-shadow: 0 0 5px #0cf; }
         .loading { position: fixed; inset: 0; background: #000; display: flex; justify-content: center; align-items: center; z-index: 999; color: #0cf; }
     </style>
 </head>
@@ -14,81 +14,89 @@
     <div id="ui-layer">
         <div id="score">得分: 0</div>
         <div id="medals">勋章: 0</div>
-        <div style="margin-top: 10px; font-size: 12px; opacity: 0.7;">操作：WASD 或 方向键移动</div>
+        <div style="margin-top: 10px; font-size: 14px; color: #fff;">[WASD] 移动 | [空格] 发射激光</div>
     </div>
 
     <script src="node_modules/three/build/three.min.js"></script>
     <script src="node_modules/@tweenjs/tween.js/dist/tween.umd.js"></script>
 
     <script>
-        // --- 1. 引擎初始化 ---
+        // --- 1. 引擎与环境 ---
         const scene = new THREE.Scene();
         const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
         const renderer = new THREE.WebGLRenderer({ antialias: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
         document.body.appendChild(renderer.domElement);
 
-        // --- 2. 玩家战机与环境 ---
-        const playerGeometry = new THREE.BoxGeometry(2, 0.5, 3);
-        const playerMaterial = new THREE.MeshPhongMaterial({ color: 0x00ccff, emissive: 0x004466 });
-        const player = new THREE.Mesh(playerGeometry, playerMaterial);
-        scene.add(player);
-
-        // 添加灯光，否则 Phong 材质是黑色的
-        const light = new THREE.DirectionalLight(0xffffff, 1);
+        // 灯光系统
+        const light = new THREE.DirectionalLight(0xffffff, 1.2);
         light.position.set(5, 10, 7.5);
         scene.add(new THREE.AmbientLight(0x404040));
         scene.add(light);
 
-        camera.position.set(0, 10, 15);
+        // --- 2. 玩家战机 ---
+        const player = new THREE.Group();
+        const body = new THREE.Mesh(new THREE.BoxGeometry(2, 0.5, 3), new THREE.MeshPhongMaterial({ color: 0x00ccff, emissive: 0x002244 }));
+        const wing = new THREE.Mesh(new THREE.BoxGeometry(5, 0.1, 1), new THREE.MeshPhongMaterial({ color: 0x00ccff }));
+        player.add(body, wing);
+        scene.add(player);
+
+        camera.position.set(0, 12, 18);
         camera.lookAt(0, 0, 0);
 
-        // --- 3. 键盘控制逻辑 ---
+        // --- 3. 核心逻辑：控制与武器 ---
         const keys = {};
-        window.addEventListener('keydown', (e) => keys[e.code] = true);
+        const bullets = [];
+        window.addEventListener('keydown', (e) => {
+            keys[e.code] = true;
+            if (e.code === 'Space') shoot();
+        });
         window.addEventListener('keyup', (e) => keys[e.code] = false);
 
-        const moveSpeed = 0.2;
+        function shoot() {
+            const bullet = new THREE.Mesh(
+                new THREE.SphereGeometry(0.2, 8, 8),
+                new THREE.MeshBasicMaterial({ color: 0xff0000 })
+            );
+            bullet.position.set(player.position.x, player.position.y, player.position.z - 2);
+            scene.add(bullet);
+            bullets.push(bullet);
+        }
 
         function handleInput() {
-            // W / Up
-            if (keys['KeyW'] || keys['ArrowUp']) player.position.z -= moveSpeed;
-            // S / Down
-            if (keys['KeyS'] || keys['ArrowDown']) player.position.z += moveSpeed;
-            // A / Left
-            if (keys['KeyA'] || keys['ArrowLeft']) player.position.x -= moveSpeed;
-            // D / Right
-            if (keys['KeyD'] || keys['ArrowRight']) player.position.x += moveSpeed;
-
-            // 简单的边界限制
-            player.position.x = THREE.MathUtils.clamp(player.position.x, -15, 15);
-            player.position.z = THREE.MathUtils.clamp(player.position.z, -10, 5);
+            const speed = 0.25;
+            if (keys['KeyW'] || keys['ArrowUp']) player.position.z -= speed;
+            if (keys['KeyS'] || keys['ArrowDown']) player.position.z += speed;
+            if (keys['KeyA'] || keys['ArrowLeft']) player.position.x -= speed;
+            if (keys['KeyD'] || keys['ArrowRight']) player.position.x += speed;
+            
+            player.position.x = THREE.MathUtils.clamp(player.position.x, -18, 18);
+            player.position.z = THREE.MathUtils.clamp(player.position.z, -12, 6);
         }
 
         // --- 4. 渲染循环 ---
         function animate(time) {
             requestAnimationFrame(animate);
-            
-            // 隐藏加载画面
-            if (document.getElementById('loading-screen').style.display !== 'none') {
-                document.getElementById('loading-screen').style.display = 'none';
+            document.getElementById('loading-screen').style.display = 'none';
+
+            handleInput();
+
+            // 子弹飞行
+            for (let i = bullets.length - 1; i >= 0; i--) {
+                bullets[i].position.z -= 0.6;
+                if (bullets[i].position.z < -40) {
+                    scene.remove(bullets[i]);
+                    bullets.splice(i, 1);
+                }
             }
 
-            handleInput(); // 处理移动
-            
             if (typeof TWEEN !== 'undefined') TWEEN.update(time);
-
-            // 战机自转动画
-            player.rotation.y += 0.01;
-            player.rotation.x = (keys['KeyW'] || keys['ArrowUp']) ? -0.2 : (keys['KeyS'] || keys['ArrowDown'] ? 0.2 : 0);
-
+            player.rotation.y = Math.sin(time * 0.002) * 0.1; // 战机轻微摆动
+            
             renderer.render(scene, camera);
         }
-
-        // 启动引擎
         animate();
 
-        // 窗口适配
         window.onresize = () => {
             camera.aspect = window.innerWidth / window.innerHeight;
             camera.updateProjectionMatrix();

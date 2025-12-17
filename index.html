@@ -2,60 +2,93 @@
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>星际主宰</title>
+    <title>星际主宰 - 桌面专业版</title>
     <style>
         body { margin: 0; background: #000; overflow: hidden; font-family: 'Segoe UI', sans-serif; }
-        #ui-layer { position: fixed; inset: 0; pointer-events: none; color: #0cf; padding: 20px; }
-        .loading { position: fixed; inset: 0; background: #000; display: flex; justify-content: center; align-items: center; z-index: 999; }
-        #kill-cam-overlay { position: fixed; top: 0; width: 100%; height: 100px; background: linear-gradient(to bottom, #000, transparent); display: none; text-align: center; color: red; font-weight: bold; }
+        #ui-layer { position: fixed; inset: 0; pointer-events: none; color: #0cf; padding: 20px; z-index: 10; }
+        .loading { position: fixed; inset: 0; background: #000; display: flex; justify-content: center; align-items: center; z-index: 999; color: #0cf; }
     </style>
 </head>
 <body>
-    <div id="loading-screen" class="loading"><h2>系统初始化中...</h2></div>
-    <div id="kill-cam-overlay"><h1>REPLAY - CRITICAL HIT</h1></div>
+    <div id="loading-screen" class="loading"><h2>系统引擎启动中...</h2></div>
     <div id="ui-layer">
         <div id="score">得分: 0</div>
         <div id="medals">勋章: 0</div>
+        <div style="margin-top: 10px; font-size: 12px; opacity: 0.7;">操作：WASD 或 方向键移动</div>
     </div>
 
-   <script src="node_modules/three/build/three.min.js"></script>
-<script src="node_modules/@tweenjs/tween.js/dist/tween.umd.js"></script>
+    <script src="node_modules/three/build/three.min.js"></script>
+    <script src="node_modules/@tweenjs/tween.js/dist/tween.umd.js"></script>
+
     <script>
-        // --- 1. 初始化 3D 引擎 ---
+        // --- 1. 引擎初始化 ---
         const scene = new THREE.Scene();
         const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
         const renderer = new THREE.WebGLRenderer({ antialias: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
         document.body.appendChild(renderer.domElement);
 
-        // --- 2. 存档系统 (IndexedDB) ---
-        let db;
-        const request = indexedDB.open("StarDominionDB", 1);
-        request.onupgradeneeded = e => e.target.result.createObjectStore("saveData");
-        request.onsuccess = e => { 
-            db = e.target.result;
-            document.getElementById('loading-screen').style.display = 'none';
-        };
-
-        // --- 3. 游戏对象 ---
-        const player = new THREE.Mesh(new THREE.BoxGeometry(2, 0.5, 3), new THREE.MeshBasicMaterial({ color: 0x00ccff }));
+        // --- 2. 玩家战机与环境 ---
+        const playerGeometry = new THREE.BoxGeometry(2, 0.5, 3);
+        const playerMaterial = new THREE.MeshPhongMaterial({ color: 0x00ccff, emissive: 0x004466 });
+        const player = new THREE.Mesh(playerGeometry, playerMaterial);
         scene.add(player);
-        camera.position.set(0, 15, 20);
+
+        // 添加灯光，否则 Phong 材质是黑色的
+        const light = new THREE.DirectionalLight(0xffffff, 1);
+        light.position.set(5, 10, 7.5);
+        scene.add(new THREE.AmbientLight(0x404040));
+        scene.add(light);
+
+        camera.position.set(0, 10, 15);
         camera.lookAt(0, 0, 0);
 
-        // --- 4. 循环与渲染 ---
+        // --- 3. 键盘控制逻辑 ---
+        const keys = {};
+        window.addEventListener('keydown', (e) => keys[e.code] = true);
+        window.addEventListener('keyup', (e) => keys[e.code] = false);
+
+        const moveSpeed = 0.2;
+
+        function handleInput() {
+            // W / Up
+            if (keys['KeyW'] || keys['ArrowUp']) player.position.z -= moveSpeed;
+            // S / Down
+            if (keys['KeyS'] || keys['ArrowDown']) player.position.z += moveSpeed;
+            // A / Left
+            if (keys['KeyA'] || keys['ArrowLeft']) player.position.x -= moveSpeed;
+            // D / Right
+            if (keys['KeyD'] || keys['ArrowRight']) player.position.x += moveSpeed;
+
+            // 简单的边界限制
+            player.position.x = THREE.MathUtils.clamp(player.position.x, -15, 15);
+            player.position.z = THREE.MathUtils.clamp(player.position.z, -10, 5);
+        }
+
+        // --- 4. 渲染循环 ---
         function animate(time) {
             requestAnimationFrame(animate);
-            TWEEN.update(time);
             
-            // 基础移动逻辑 (示例)
+            // 隐藏加载画面
+            if (document.getElementById('loading-screen').style.display !== 'none') {
+                document.getElementById('loading-screen').style.display = 'none';
+            }
+
+            handleInput(); // 处理移动
+            
+            if (typeof TWEEN !== 'undefined') TWEEN.update(time);
+
+            // 战机自转动画
             player.rotation.y += 0.01;
-            
+            player.rotation.x = (keys['KeyW'] || keys['ArrowUp']) ? -0.2 : (keys['KeyS'] || keys['ArrowDown'] ? 0.2 : 0);
+
             renderer.render(scene, camera);
         }
+
+        // 启动引擎
         animate();
 
-        // 窗口大小适配
+        // 窗口适配
         window.onresize = () => {
             camera.aspect = window.innerWidth / window.innerHeight;
             camera.updateProjectionMatrix();

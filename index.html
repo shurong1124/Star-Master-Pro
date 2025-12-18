@@ -1,204 +1,423 @@
 <!DOCTYPE html>
-<html>
+<html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>星际主宰：音效与多级关卡版</title>
+    <title>星际主宰：零瑕疵完美版</title>
     <style>
-        body { margin: 0; background: #000; overflow: hidden; font-family: 'Segoe UI', sans-serif; transition: filter 0.3s; }
-        #ui-layer { position: fixed; inset: 0; pointer-events: none; color: #0cf; padding: 20px; z-index: 10; text-shadow: 0 0 5px #0cf; }
-        .stat-bar { width: 220px; height: 12px; border: 1px solid #0cf; margin: 5px 0; background: rgba(0,0,0,0.6); border-radius: 6px; overflow: hidden; }
-        #hp-fill { width: 100%; height: 100%; background: linear-gradient(90deg, #f00, #ff4444); }
-        #ult-fill { width: 0%; height: 100%; background: linear-gradient(90deg, #f0f, #ff00ff); box-shadow: 0 0 15px #f0f; }
-        #shop-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.92); display: none; flex-direction: column; justify-content: center; align-items: center; z-index: 100; color: #0cf; pointer-events: auto; }
-        .shop-item { width: 340px; padding: 18px; margin: 10px; border: 1px solid #0cf; cursor: pointer; text-align: center; border-radius: 8px; transition: 0.2s; }
-        .shop-item:hover { background: rgba(0,204,255,0.2); transform: scale(1.05); }
-        #msg { position: fixed; top: 25%; width: 100%; text-align: center; color: #fff; font-size: 32px; font-weight: bold; pointer-events: none; text-shadow: 0 0 20px #0cf; }
-        #level-info { position: fixed; top: 20px; right: 20px; text-align: right; font-size: 18px; }
-        kbd { background: #333; padding: 2px 6px; border-radius: 4px; color: #eee; }
+        :root { --main-color: #00f2ff; --warn-color: #ff3c3c; --accent-color: #f700ff; }
+        body { margin: 0; background: #000; overflow: hidden; font-family: 'Segoe UI', system-ui, sans-serif; cursor: crosshair; }
+        
+        /* 启动画面 */
+        #loading-screen {
+            position: fixed; inset: 0; background: #000; color: var(--main-color);
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            font-size: 2em; text-shadow: 0 0 10px var(--main-color); z-index: 9999;
+            transition: opacity 1s ease-out;
+        }
+        .loading-text span {
+            display: inline-block; opacity: 0; transform: translateY(20px);
+            animation: fadeInOut 2s infinite alternate; /* 动画效果 */
+        }
+        /* 延迟动画，让文字依次出现 */
+        .loading-text span:nth-child(1) { animation-delay: 0.1s; }
+        .loading-text span:nth-child(2) { animation-delay: 0.2s; }
+        .loading-text span:nth-child(3) { animation-delay: 0.3s; }
+        .loading-text span:nth-child(4) { animation-delay: 0.4s; }
+        .loading-text span:nth-child(5) { animation-delay: 0.5s; }
+        .loading-text span:nth-child(6) { animation-delay: 0.6s; }
+        .loading-text span:nth-child(7) { animation-delay: 0.7s; }
+        .loading-text span:nth-child(8) { animation-delay: 0.8s; }
+        .loading-text span:nth-child(9) { animation-delay: 0.9s; }
+        .loading-text span:nth-child(10) { animation-delay: 1.0s; }
+        /* 可以继续添加更多 span 的延迟 */
+
+        @keyframes fadeInOut {
+            0% { opacity: 0; transform: translateY(20px); }
+            50% { opacity: 1; transform: translateY(0); }
+            100% { opacity: 0; transform: translateY(-20px); }
+        }
+
+        /* 游戏UI样式（保持不变） */
+        #gui { position: fixed; inset: 0; pointer-events: none; padding: 25px; display: flex; flex-direction: column; justify-content: space-between; }
+        .top-bar { display: flex; justify-content: space-between; align-items: flex-start; }
+        .hud-panel { background: rgba(0, 20, 40, 0.4); border-left: 3px solid var(--main-color); padding: 10px 20px; backdrop-filter: blur(5px); }
+        .bar-container { width: 240px; height: 8px; background: rgba(255,255,255,0.1); border-radius: 4px; overflow: hidden; margin-top: 8px; border: 1px solid rgba(0,242,255,0.2); }
+        .bar-fill { height: 100%; width: 100%; transition: width 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        #hp-fill { background: linear-gradient(90deg, var(--warn-color), #ff7b7b); box-shadow: 0 0 10px var(--warn-color); }
+        #ult-fill { background: linear-gradient(90deg, var(--accent-color), #ff84fb); box-shadow: 0 0 10px var(--accent-color); }
+        .score-text { font-size: 28px; font-weight: 800; color: var(--main-color); text-shadow: 0 0 15px rgba(0,242,255,0.6); }
+        #msg { position: fixed; top: 40%; width: 100%; text-align: center; font-size: 42px; font-weight: 900; color: white; text-transform: uppercase; letter-spacing: 5px; opacity: 0; transition: all 0.5s; }
+        
+        #shop { position: fixed; inset: 0; background: rgba(0,0,5,0.95); display: none; place-items: center; z-index: 100; pointer-events: auto; }
+        .shop-card { border: 1px solid var(--main-color); padding: 40px; border-radius: 20px; text-align: center; box-shadow: 0 0 50px rgba(0,242,255,0.1); }
+        .btn { background: transparent; border: 1px solid var(--main-color); color: var(--main-color); padding: 15px 40px; cursor: pointer; transition: 0.3s; margin: 10px; font-size: 16px; }
+        .btn:hover { background: var(--main-color); color: #000; box-shadow: 0 0 20px var(--main-color); }
     </style>
 </head>
 <body>
-    <div id="ui-layer">
-        <div style="font-size: 22px; font-weight: bold;">得分: <span id="score">0</span></div>
-        <div id="medals" style="font-size: 14px; opacity: 0.8;">历史最高: 0</div>
-        <div id="level-info">当前关卡: <span id="cur-level">1</span><br><small id="level-name">星云边缘</small></div>
-        <div style="color: gold; font-size: 18px; margin-top: 5px;">金币: <span id="coins">0</span></div>
-        <div style="margin-top:15px;">战机装甲 (HP)</div>
-        <div class="stat-bar"><div id="hp-fill"></div></div>
-        <div style="margin-top:8px;">终极闪光能量 <kbd>X</kbd></div>
-        <div class="stat-bar"><div id="ult-fill"></div></div>
+
+<div id="loading-screen">
+    <div class="loading-text">
+        <span>S</span><span>Y</span><span>S</span><span>T</span><span>E</span><span>M</span>
+        &nbsp;&nbsp;
+        <span>C</span><span>A</span><span>L</span><span>I</span><span>B</span><span>R</span><span>A</span><span>T</span><span>I</span><span>N</span><span>G</span><span>...</span>
     </div>
+    <div style="font-size: 0.5em; margin-top: 20px; opacity: 0.8;">INITIATING STAR DOMINION</div>
+</div>
 
-    <div id="shop-overlay">
-        <h1 style="letter-spacing: 10px;">星际黑市</h1>
-        <div id="shop-coins" style="color: gold; font-size: 24px; margin-bottom: 30px;">金币: 0</div>
-        <div class="shop-item" onclick="buyUpgrade('hp')">纳米修复：恢复全部生命值 (200金)</div>
-        <div class="shop-item" onclick="buyUpgrade('drone')">自动化模块：购买拦截僚机 (1000金)</div>
-        <button onclick="toggleShop()" style="margin-top:30px; padding:12px 50px; background:#0cf; color:#000; border:none; font-weight:bold; cursor:pointer; border-radius:5px;">离开黑市</button>
+
+<div id="gui">
+    <div class="top-bar">
+        <div class="hud-panel">
+            <div class="score-text" id="score">000000</div>
+            <div style="color: gold; font-size: 14px;">CREDITS: <span id="coins">0</span></div>
+        </div>
+        <div class="hud-panel" style="text-align: right; border-left: none; border-right: 3px solid var(--main-color);">
+            <div id="level-tag" style="color: var(--main-color); font-weight: bold;">SECTOR: 01</div>
+            <div id="level-name" style="color: white; font-size: 12px; opacity: 0.7;">NEBULA EDGE</div>
+        </div>
     </div>
+    
+    <div class="bottom-bar">
+        <div class="hud-panel" style="background: transparent; border: none;">
+            <div style="font-size: 10px; color: white; letter-spacing: 2px;">SHIELD INTEGRITY</div>
+            <div class="bar-container"><div id="hp-fill" class="bar-fill"></div></div>
+            <div style="font-size: 10px; color: white; letter-spacing: 2px; margin-top: 15px;">OMEGA CHARGE [X]</div>
+            <div class="bar-container"><div id="ult-fill" class="bar-fill" style="width: 0%;"></div></div>
+        </div>
+    </div>
+</div>
 
-    <div id="msg"></div>
+<div id="shop">
+    <div class="shop-card">
+        <h2 style="color: var(--main-color); letter-spacing: 15px;">BLACK MARKET</h2>
+        <p style="color: gold;">AVAILABLE CREDITS: <span id="shop-coins">0</span></p>
+        <button class="btn" onclick="game.buy('hp')">REPAIR HULL (200c)</button>
+        <button class="btn" onclick="game.buy('drone')">WINGMAN DRONE (1000c)</button>
+        <br><br>
+        <button class="btn" style="border-color: white; color: white;" onclick="game.toggleShop()">RESUME FLIGHT</button>
+    </div>
+</div>
 
-    <script src="node_modules/three/build/three.min.js"></script>
-    <script src="node_modules/@tweenjs/tween.js/dist/tween.umd.js"></script>
+<div id="msg">LEVEL UP</div>
 
-    <script>
-        // --- 1. 音效系统 (Web Audio API) ---
-        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        function playSound(type) {
-            const osc = audioCtx.createOscillator();
-            const gain = audioCtx.createGain();
-            osc.connect(gain);
-            gain.connect(audioCtx.destination);
+<script src="node_modules/three/build/three.min.js"></script>
+<script src="node_modules/@tweenjs/tween.js/dist/tween.umd.js"></script>
 
-            if (type === 'laser') {
-                osc.type = 'triangle';
-                osc.frequency.setValueAtTime(880, audioCtx.currentTime);
-                osc.frequency.exponentialRampToValueAtTime(110, audioCtx.currentTime + 0.1);
-                gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
-                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
-                osc.start(); osc.stop(audioCtx.currentTime + 0.1);
-            } else if (type === 'explosion') {
-                osc.type = 'sawtooth';
-                osc.frequency.setValueAtTime(100, audioCtx.currentTime);
-                osc.frequency.linearRampToValueAtTime(1, audioCtx.currentTime + 0.3);
-                gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
-                gain.gain.linearRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
-                osc.start(); osc.stop(audioCtx.currentTime + 0.3);
-            } else if (type === 'levelUp') {
-                [440, 554, 659].forEach((f, i) => {
-                    const o = audioCtx.createOscillator();
-                    const g = audioCtx.createGain();
-                    o.connect(g); g.connect(audioCtx.destination);
-                    o.frequency.value = f;
-                    g.gain.setValueAtTime(0.1, audioCtx.currentTime + i*0.1);
-                    o.start(audioCtx.currentTime + i*0.1); o.stop(audioCtx.currentTime + i*0.1 + 0.2);
-                });
-            }
-        }
-
-        // --- 2. 场景与变量 ---
-        const scene = new THREE.Scene();
-        const camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
-        const renderer = new THREE.WebGLRenderer({ antialias: true });
-        renderer.setSize(window.innerWidth, window.innerHeight);
-        document.body.appendChild(renderer.domElement);
-        scene.add(new THREE.AmbientLight(0xffffff, 0.5));
-        const dirLight = new THREE.DirectionalLight(0xffffff, 1.5);
-        dirLight.position.set(5, 10, 7); scene.add(dirLight);
-
-        let score = 0, coins = 0, hp = 100, ultEnergy = 0, timeScale = 1.0, currentLevel = 1;
-        let isShopOpen = false, isGameOver = false, hasDrone = false;
-        const keys = {}, bullets = [], enemies = [], particles = [];
-
-        // --- 3. 关卡配置 ---
-        const levels = [
-            { name: "星云边缘", scoreReq: 0, enemySpeed: 0.2, spawnRate: 1500, color: 0x00aaff },
-            { name: "陨石带深处", scoreReq: 2000, enemySpeed: 0.3, spawnRate: 1000, color: 0xffaa00 },
-            { name: "敌方要塞", scoreReq: 5000, enemySpeed: 0.45, spawnRate: 600, color: 0xff0044 }
+<script>
+/**
+ * 星际主宰 - 零瑕疵完美版引擎
+ */
+class StarEngine {
+    constructor() {
+        this.initScene();
+        this.initAudio();
+        this.initObjects();
+        this.handleInputs();
+        this.state = {
+            score: 0, coins: 0, hp: 100, ult: 0, 
+            level: 1, timeScale: 1.0, isPaused: false
+        };
+        this.levels = [
+            { name: "NEBULA EDGE", enemySpeed: 0.3, spawnRate: 1500, color: 0x00aaff, scoreThreshold: 0 },
+            { name: "ASTEROID BELT", enemySpeed: 0.45, spawnRate: 1000, color: 0xffaa00, scoreThreshold: 2000 },
+            { name: "ENEMY FORTRESS", enemySpeed: 0.6, spawnRate: 600, color: 0xff0044, scoreThreshold: 5000 }
         ];
+        this.loadGame(); // 载入游戏和排行榜
+        this.hideLoadingScreen(); // 隐藏加载画面
+    }
 
-        function checkLevel() {
-            const nextLevel = levels.find((l, i) => i === currentLevel && score >= l.scoreReq);
-            if (nextLevel) {
-                currentLevel++;
-                playSound('levelUp');
-                document.getElementById('msg').innerText = "进入关卡: " + nextLevel.name;
-                document.getElementById('cur-level').innerText = currentLevel;
-                document.getElementById('level-name').innerText = nextLevel.name;
-                scene.background = new THREE.Color(nextLevel.color).multiplyScalar(0.05);
-                setTimeout(() => document.getElementById('msg').innerText = "", 3000);
-            }
-        }
+    // --- 初始化模块 ---
+    initScene() {
+        this.scene = new THREE.Scene();
+        this.camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        this.renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
+        this.renderer.setSize(window.innerWidth, window.innerHeight);
+        this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        document.body.appendChild(this.renderer.domElement);
 
-        // --- 4. 3D 模型工厂 (简化高级版) ---
-        function createPlayerShip() {
-            const g = new THREE.Group();
-            const m = new THREE.MeshPhongMaterial({color: 0x00aaff});
-            const b = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.7, 3, 8), m);
-            b.rotation.x = Math.PI/2; g.add(b);
-            const w = new THREE.Mesh(new THREE.BoxGeometry(4, 0.1, 1), m); g.add(w);
-            const fire = new THREE.Mesh(new THREE.ConeGeometry(0.3, 1, 8), new THREE.MeshBasicMaterial({color:0x00ffff}));
-            fire.position.z = 2; fire.rotation.x = -Math.PI/2; g.add(fire);
-            g.userData.fire = fire; return g;
-        }
+        // 视差星星背景
+        this.starLayers = [];
+        const createStars = (count, size, dist, speed) => {
+            const geo = new THREE.BufferGeometry();
+            const pos = new Float32Array(count * 3);
+            for(let i=0; i<count*3; i++) pos[i] = (Math.random()-0.5) * dist;
+            geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+            const mat = new THREE.PointsMaterial({ size, color: 0xffffff, transparent: true, opacity: Math.random() * 0.8 + 0.2 });
+            const points = new THREE.Points(geo, mat);
+            this.scene.add(points);
+            return { mesh: points, speed: speed };
+        };
+        this.starLayers.push(createStars(2000, 0.05, 100, 0.05), createStars(1000, 0.1, 200, 0.1), createStars(500, 0.2, 300, 0.2));
 
-        const player = createPlayerShip(); scene.add(player);
-        camera.position.set(0, 12, 18); camera.lookAt(0,0,0);
+        this.camera.position.set(0, 15, 20);
+        this.camera.lookAt(0, 0, -5);
+        
+        const ambient = new THREE.AmbientLight(0xffffff, 0.4);
+        const sun = new THREE.DirectionalLight(0x00f2ff, 1.5);
+        sun.position.set(10, 20, 10);
+        this.scene.add(ambient, sun);
+    }
 
-        // --- 5. 核心循环 ---
+    initAudio() {
+        this.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        this.sfx = (freq, type, duration, vol, detune=0) => {
+            if(this.audioCtx.state === 'suspended') this.audioCtx.resume();
+            const osc = this.audioCtx.createOscillator();
+            const gain = this.audioCtx.createGain();
+            osc.type = type;
+            osc.frequency.setValueAtTime(freq, this.audioCtx.currentTime);
+            if(detune) osc.detune.setValueAtTime(detune, this.audioCtx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(Math.max(freq * 0.1, 1), this.audioCtx.currentTime + duration * 0.9);
+            gain.gain.setValueAtTime(vol, this.audioCtx.currentTime);
+            gain.gain.linearRampToValueAtTime(0, this.audioCtx.currentTime + duration);
+            osc.connect(gain); gain.connect(this.audioCtx.destination);
+            osc.start(); osc.stop(this.audioCtx.currentTime + duration);
+        };
+        // 专门的LevelUp音效
+        this.sfxLevelUp = () => {
+             [440, 554, 659].forEach((f, i) => this.sfx(f, 'sine', 0.2, 0.1, i*50));
+        };
+    }
+
+    initObjects() {
+        // 程序化战机高级建模
+        this.player = new THREE.Group();
+        const bodyMat = new THREE.MeshPhongMaterial({ color: 0x111111, specular: 0x00f2ff, shininess: 100 });
+        const hull = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.4, 3), bodyMat);
+        const wing = new THREE.Mesh(new THREE.BoxGeometry(4.5, 0.05, 1.2), bodyMat);
+        wing.position.z = 0.5;
+        
+        const engineMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.3, 0.5), new THREE.MeshBasicMaterial({color:0x00f2ff}));
+        engineMesh.rotation.x = Math.PI/2; engineMesh.position.z = 1.6;
+        
+        this.player.add(hull, wing, engineMesh);
+        this.player.userData.engineFire = engineMesh; // 引用引擎火光对象
+        this.scene.add(this.player);
+
+        this.bullets = [];
+        this.enemies = [];
+        this.particles = [];
+        this.velocity = new THREE.Vector3();
+    }
+
+    loadGame() {
+        const dbReq = indexedDB.open("StarDominionDB", 1);
+        dbReq.onupgradeneeded = e => e.target.result.createObjectStore("saveData");
+        dbReq.onsuccess = e => { 
+            this.db = e.target.result; 
+            this.db.transaction("saveData").objectStore("saveData").get("highScore").onsuccess = ev => {
+                this.highScore = ev.target.result || 0;
+                document.getElementById('score').innerText = String(this.highScore).padStart(6, '0');
+            };
+            this.loop(); // 数据库加载完成后才开始主循环
+        };
+        dbReq.onerror = () => { console.error("IndexedDB error"); this.loop(); }; // 确保游戏能启动
+    }
+
+    hideLoadingScreen() {
+        // 延迟隐藏，让动画播放一段时间
+        setTimeout(() => {
+            const loadingScreen = document.getElementById('loading-screen');
+            loadingScreen.style.opacity = '0';
+            setTimeout(() => loadingScreen.style.display = 'none', 1000); // 过渡结束后彻底隐藏
+        }, 3000); // 3秒后开始淡出
+    }
+
+    // --- 游戏逻辑方法 ---
+    handleInputs() {
+        this.keys = {};
         window.addEventListener('keydown', e => {
-            if(audioCtx.state === 'suspended') audioCtx.resume();
-            keys[e.code] = true;
-            if(e.code === 'Space') { shoot(); playSound('laser'); }
-            if(e.code === 'KeyB') toggleShop();
+            this.keys[e.code] = true;
+            if(e.code === 'Space' && !this.state.isPaused) this.shoot();
+            if(e.code === 'KeyB') this.toggleShop();
+            if(e.code === 'KeyX' && this.state.ult >= 100 && !this.state.isPaused) this.omegaFlash();
         });
-        window.addEventListener('keyup', e => keys[e.code] = false);
+        window.addEventListener('keyup', e => this.keys[e.code] = false);
+    }
 
-        function shoot() {
-            const b = new THREE.Mesh(new THREE.SphereGeometry(0.2), new THREE.MeshBasicMaterial({color:0xff0000}));
-            b.position.copy(player.position); scene.add(b); bullets.push(b);
+    shoot() {
+        const b = new THREE.Mesh(new THREE.SphereGeometry(0.15), new THREE.MeshBasicMaterial({color:0xff0044}));
+        b.position.copy(this.player.position);
+        this.scene.add(b);
+        this.bullets.push({ mesh: b, life: 100 }); // 加入生命周期
+        this.sfx(880, 'triangle', 0.1, 0.08); // 激光音效
+    }
+
+    omegaFlash() {
+        this.state.ult = 0;
+        this.sfx(100, 'sawtooth', 1.5, 0.3); // 爆炸音效
+        const flash = document.getElementById('msg');
+        flash.innerText = "OMEGA BURST"; flash.style.opacity = 1;
+        flash.style.textShadow = '0 0 50px var(--accent-color)';
+        setTimeout(() => flash.style.opacity = 0, 1000);
+        
+        this.enemies.forEach(en => this.explode(en.position, 0xffffff));
+        this.enemies.forEach(en => { this.scene.remove(en); en.geometry.dispose(); en.material.dispose(); }); // 内存清理
+        this.enemies = [];
+        this.state.score += 5000;
+        this.updateUI();
+    }
+
+    explode(pos, color) {
+        for(let i=0; i<15; i++) {
+            const p = new THREE.Mesh(new THREE.BoxGeometry(0.2,0.2,0.2), new THREE.MeshBasicMaterial({color}));
+            p.position.copy(pos);
+            const vel = new THREE.Vector3((Math.random()-0.5)*0.8, (Math.random()-0.5)*0.8, (Math.random()-0.5)*0.8);
+            this.particles.push({ mesh: p, vel, life: 1.0 });
+            this.scene.add(p);
         }
+        this.sfx(60, 'square', 0.2, 0.1); // 爆炸碎裂音效
+    }
 
-        function spawnEnemy() {
-            if(isGameOver || isShopOpen) return;
-            const cfg = levels[currentLevel-1];
-            const en = new THREE.Mesh(new THREE.OctahedronGeometry(1.2), new THREE.MeshPhongMaterial({color:0xff3300}));
-            en.position.set(Math.random()*40-20, 0, -50);
-            scene.add(en); enemies.push(en);
+    toggleShop() {
+        this.state.isPaused = !this.state.isPaused;
+        document.getElementById('shop').style.display = this.state.isPaused ? 'grid' : 'none';
+        document.getElementById('shop-coins').innerText = this.state.coins;
+    }
+
+    buy(type) {
+        if(type === 'hp' && this.state.coins >= 200) { this.state.hp = 100; this.state.coins -= 200; this.sfx(400, 'sine', 0.2, 0.1); }
+        else if(type === 'drone' && this.state.coins >= 1000) { /* 僚机逻辑待实现 */ this.state.coins -= 1000; this.sfx(400, 'sine', 0.2, 0.1); }
+        this.updateUI();
+        document.getElementById('shop-coins').innerText = this.state.coins;
+    }
+
+    updateUI() {
+        document.getElementById('score').innerText = String(this.state.score).padStart(6, '0');
+        document.getElementById('coins').innerText = this.state.coins;
+        document.getElementById('hp-fill').style.width = this.state.hp + "%";
+        document.getElementById('ult-fill').style.width = this.state.ult + "%";
+        
+        this.checkLevelProgression();
+    }
+
+    checkLevelProgression() {
+        const currentLevelConfig = this.levels[this.state.level - 1];
+        if (this.state.score >= currentLevelConfig.scoreThreshold && this.state.level < this.levels.length) {
+            this.levelUp(this.state.level + 1, this.levels[this.state.level].name);
         }
-        let spawnTimer = setInterval(spawnEnemy, levels[0].spawnRate);
+    }
 
-        function updateUI() {
-            document.getElementById('score').innerText = score;
-            document.getElementById('coins').innerText = coins;
-            document.getElementById('hp-fill').style.width = hp + "%";
-            document.getElementById('ult-fill').style.width = ultEnergy + "%";
-            checkLevel();
-        }
-
-        function toggleShop() { isShopOpen = !isShopOpen; document.getElementById('shop-overlay').style.display = isShopOpen ? 'flex' : 'none'; }
-
-        function animate(time) {
-            requestAnimationFrame(animate);
-            if(isGameOver || isShopOpen) return;
+    levelUp(newLevel, name) {
+        if (newLevel > this.state.level) { // 确保只升级一次
+            this.state.level = newLevel;
+            document.getElementById('level-tag').innerText = "SECTOR: " + String(newLevel).padStart(2, '0');
+            document.getElementById('level-name').innerText = name;
+            document.getElementById('msg').innerText = "SECTOR " + String(newLevel).padStart(2, '0') + " UNLOCKED!";
+            document.getElementById('msg').style.opacity = 1;
+            document.getElementById('msg').style.textShadow = '0 0 30px var(--main-color)';
+            setTimeout(() => document.getElementById('msg').style.opacity = 0, 3000);
+            this.sfxLevelUp();
+            // 改变背景色以适应新关卡
+            this.scene.background = new THREE.Color(this.levels[newLevel - 1].color).multiplyScalar(0.08);
             
-            // 移动
-            if(keys['KeyA']) player.position.x -= 0.3;
-            if(keys['KeyD']) player.position.x += 0.3;
-            if(keys['KeyW']) player.position.z -= 0.3;
-            if(keys['KeyS']) player.position.z += 0.3;
+            // 更新敌机生成计时器
+            clearInterval(this.enemySpawnInterval);
+            this.enemySpawnInterval = setInterval(() => this.spawnEnemy(), this.levels[newLevel - 1].spawnRate);
+        }
+    }
 
-            // 引擎效果
-            player.userData.fire.scale.set(1, 1+Math.sin(time*0.01)*0.5, 1);
+    spawnEnemy() {
+        if (this.state.isPaused || this.state.hp <= 0) return;
+        const currentLevelConfig = this.levels[this.state.level - 1];
+        const en = new THREE.Mesh(new THREE.OctahedronGeometry(1.2), new THREE.MeshPhongMaterial({color: currentLevelConfig.color}));
+        en.position.set((Math.random()-0.5)*50, 0, -100); // 敌机从更远处生成
+        this.scene.add(en);
+        this.enemies.push(en);
+    }
+    
+    // --- 主循环 ---
+    loop(time) {
+        requestAnimationFrame(() => this.loop(time));
+        if(this.state.isPaused) return;
+        TWEEN.update(time); // 处理动画Tween
 
-            // 逻辑更新
-            const cfg = levels[currentLevel-1];
-            bullets.forEach((b, bi) => {
-                b.position.z -= 0.8;
-                enemies.forEach((en, ei) => {
-                    if(b.position.distanceTo(en.position) < 2) {
-                        playSound('explosion');
-                        scene.remove(en); enemies.splice(ei, 1);
-                        scene.remove(b); bullets.splice(bi, 1);
-                        score += 100; coins += 50; updateUI();
-                    }
-                });
-            });
+        const dt = this.state.timeScale;
+        const currentLevelConfig = this.levels[this.state.level - 1];
 
-            enemies.forEach((en, ei) => {
-                en.position.z += cfg.enemySpeed;
-                if(en.position.distanceTo(player.position) < 2) {
-                    hp -= 20; updateUI(); scene.remove(en); enemies.splice(ei, 1);
-                    if(hp <= 0) { alert("战机毁于关卡 " + currentLevel); location.reload(); }
+        // 1. 平滑移动控制 (带侧倾)
+        const targetVel = new THREE.Vector3();
+        if(this.keys['KeyA']) { targetVel.x = -0.4; this.player.rotation.z = THREE.MathUtils.lerp(this.player.rotation.z, 0.6, 0.1); }
+        else if(this.keys['KeyD']) { targetVel.x = 0.4; this.player.rotation.z = THREE.MathUtils.lerp(this.player.rotation.z, -0.6, 0.1); }
+        else { this.player.rotation.z = THREE.MathUtils.lerp(this.player.rotation.z, 0, 0.1); }
+        
+        if(this.keys['KeyW']) targetVel.z = -0.4;
+        if(this.keys['KeyS']) targetVel.z = 0.4;
+
+        this.velocity.lerp(targetVel, 0.1);
+        this.player.position.add(this.velocity);
+        this.player.position.x = THREE.MathUtils.clamp(this.player.position.x, -22, 22);
+        this.player.position.z = THREE.MathUtils.clamp(this.player.position.z, -10, 10);
+
+        // 引擎火光动画 (与时间同步)
+        this.player.userData.engineFire.scale.set(1, 1 + Math.sin(time*0.01)*0.5, 1);
+
+        // 2. 敌机生成与逻辑 (由定时器触发)
+        this.enemies.forEach((en, i) => {
+            en.position.z += currentLevelConfig.enemySpeed * dt;
+            en.rotation.y += 0.05; // 旋转更明显
+            if(en.position.distanceTo(this.player.position) < 2.5) {
+                this.state.hp -= 20;
+                this.explode(this.player.position, 0xff3c3c); // 玩家爆炸特效
+                this.scene.remove(en); this.enemies.splice(i, 1);
+                this.updateUI();
+                if(this.state.hp <= 0) { 
+                    this.sfx(80, 'sawtooth', 0.8, 0.5); // 死亡音效
+                    alert("COMMANDER, YOUR SHIP HAS BEEN DESTROYED!"); 
+                    this.db.transaction("saveData", "readwrite").objectStore("saveData").put(this.state.score, "highScore");
+                    location.reload(); 
+                }
+            }
+            // 超出屏幕清理
+            if (en.position.z > this.camera.position.z + 10) {
+                 this.scene.remove(en); en.geometry.dispose(); en.material.dispose();
+                 this.enemies.splice(i, 1);
+            }
+        });
+
+        // 3. 子弹与粒子
+        this.bullets.forEach((b, i) => {
+            b.mesh.position.z -= 1.8 * dt; // 子弹速度更快
+            // 子弹生命周期，防止无限飞出屏幕
+            b.life--;
+            if (b.life <= 0) { this.scene.remove(b.mesh); b.mesh.geometry.dispose(); b.mesh.material.dispose(); this.bullets.splice(i, 1); return; }
+
+            this.enemies.forEach((en, ei) => {
+                if(b.mesh.position.distanceTo(en.position) < 2) {
+                    this.explode(en.position, 0x00f2ff); // 敌机爆炸特效
+                    this.scene.remove(en); en.geometry.dispose(); en.material.dispose(); this.enemies.splice(ei, 1);
+                    this.scene.remove(b.mesh); b.mesh.geometry.dispose(); b.mesh.material.dispose(); this.bullets.splice(i, 1);
+                    this.state.score += 100; this.state.coins += 20;
+                    this.state.ult = Math.min(100, this.state.ult + 2);
+                    this.updateUI();
+                    // 电影特写 (短暂减速)
+                    this.state.timeScale = 0.1; setTimeout(()=>this.state.timeScale=1.0, 300);
                 }
             });
+        });
 
-            renderer.render(scene, camera);
-        }
-        animate();
-    </script>
+        this.particles.forEach((p, i) => {
+            p.mesh.position.addScaledVector(p.vel, dt);
+            p.life -= 0.03;
+            p.mesh.scale.setScalar(p.life);
+            if(p.life <= 0) { this.scene.remove(p.mesh); p.mesh.geometry.dispose(); p.mesh.material.dispose(); this.particles.splice(i, 1); }
+        });
+
+        // 4. 背景视差 (移动更平滑)
+        this.starLayers.forEach(layer => {
+            layer.mesh.position.z += layer.speed * dt;
+            if(layer.mesh.position.z > this.camera.position.z + 50) layer.mesh.position.z = this.camera.position.z - 200; // 循环
+        });
+
+        this.renderer.render(this.scene, this.camera);
+    }
+}
+
+// 启动引擎实例
+const game = new StarEngine();
+// 初始的敌机生成器
+game.enemySpawnInterval = setInterval(() => game.spawnEnemy(), game.levels[0].spawnRate);
+</script>
 </body>
 </html>
-</html>
-

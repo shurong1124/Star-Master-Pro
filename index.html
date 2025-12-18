@@ -2,38 +2,40 @@
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>星际主宰：全功能终极版</title>
+    <title>星际主宰：终极 3D 大作版</title>
     <style>
         body { margin: 0; background: #000; overflow: hidden; font-family: 'Segoe UI', sans-serif; transition: filter 0.3s; }
         #ui-layer { position: fixed; inset: 0; pointer-events: none; color: #0cf; padding: 20px; z-index: 10; text-shadow: 0 0 5px #0cf; }
-        .stat-bar { width: 200px; height: 10px; border: 1px solid #0cf; margin: 5px 0; background: rgba(0,0,0,0.5); }
-        #hp-fill { width: 100%; height: 100%; background: #f00; }
-        #ult-fill { width: 0%; height: 100%; background: #f0f; box-shadow: 0 0 10px #f0f; }
-        #shop-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.9); display: none; flex-direction: column; justify-content: center; align-items: center; z-index: 100; color: #0cf; pointer-events: auto; }
-        .shop-item { width: 320px; padding: 15px; margin: 8px; border: 1px solid #0cf; cursor: pointer; text-align: center; }
-        .shop-item:hover { background: rgba(0,204,255,0.2); }
-        #msg { position: fixed; top: 20%; width: 100%; text-align: center; color: yellow; font-size: 24px; pointer-events: none; }
+        .stat-bar { width: 220px; height: 12px; border: 1px solid #0cf; margin: 5px 0; background: rgba(0,0,0,0.6); border-radius: 6px; overflow: hidden; }
+        #hp-fill { width: 100%; height: 100%; background: linear-gradient(90deg, #f00, #ff4444); }
+        #ult-fill { width: 0%; height: 100%; background: linear-gradient(90deg, #f0f, #ff00ff); box-shadow: 0 0 15px #f0f; }
+        #shop-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.92); display: none; flex-direction: column; justify-content: center; align-items: center; z-index: 100; color: #0cf; pointer-events: auto; }
+        .shop-item { width: 340px; padding: 18px; margin: 10px; border: 1px solid #0cf; cursor: pointer; text-align: center; border-radius: 8px; transition: 0.2s; }
+        .shop-item:hover { background: rgba(0,204,255,0.2); transform: scale(1.05); }
+        #msg { position: fixed; top: 25%; width: 100%; text-align: center; color: #fff; font-size: 28px; font-weight: bold; pointer-events: none; text-shadow: 0 0 10px #0cf; }
+        kbd { background: #333; padding: 2px 6px; border-radius: 4px; color: #eee; }
     </style>
 </head>
 <body>
     <div id="ui-layer">
-        <div style="font-size: 20px;">得分: <span id="score">0</span> | <span id="medals">历史最高: 0</span></div>
-        <div style="color: gold;">金币: <span id="coins">0</span></div>
-        <div style="margin-top:10px;">装甲生命值</div>
+        <div style="font-size: 22px; font-weight: bold;">得分: <span id="score">0</span></div>
+        <div id="medals" style="font-size: 14px; opacity: 0.8;">历史最高: 0</div>
+        <div style="color: gold; font-size: 18px; margin-top: 5px;">金币: <span id="coins">0</span></div>
+        <div style="margin-top:15px;">战机装甲 (HP)</div>
         <div class="stat-bar"><div id="hp-fill"></div></div>
-        <div style="margin-top:5px;">终极能量 [X]</div>
+        <div style="margin-top:8px;">终极闪光能量 <kbd>X</kbd></div>
         <div class="stat-bar"><div id="ult-fill"></div></div>
-        <div style="margin-top:10px; font-size: 12px; opacity: 0.8;">
-            [WASD] 移动 | [空格] 激光 | [R] 黑洞(100金) | [E] 时间凝滞 | [X] 终极闪光 | [B] 黑市
+        <div style="margin-top:20px; font-size: 13px; color: #aaa;">
+            <kbd>WASD</kbd> 行动 | <kbd>SPACE</kbd> 激光 | <kbd>R</kbd> 黑洞(100金) | <kbd>E</kbd> 凝滞 | <kbd>B</kbd> 商店
         </div>
     </div>
 
     <div id="shop-overlay">
-        <h1>--- 星际黑市 ---</h1>
-        <div id="shop-coins" style="color: gold; margin-bottom: 20px;">金币: 0</div>
-        <div class="shop-item" onclick="buyUpgrade('hp')">全速维修 (200金)</div>
-        <div class="shop-item" onclick="buyUpgrade('drone')">购买防御僚机 (1000金)</div>
-        <button onclick="toggleShop()" style="margin-top:20px; padding:10px 40px; background:#0cf; border:none; cursor:pointer;">返回战斗</button>
+        <h1 style="letter-spacing: 10px;">星际黑市</h1>
+        <div id="shop-coins" style="color: gold; font-size: 24px; margin-bottom: 30px;">金币: 0</div>
+        <div class="shop-item" onclick="buyUpgrade('hp')">纳米修复：恢复全部生命值 (200金)</div>
+        <div class="shop-item" onclick="buyUpgrade('drone')">自动化模块：购买拦截僚机 (1000金)</div>
+        <button onclick="toggleShop()" style="margin-top:30px; padding:12px 50px; background:#0cf; color:#000; border:none; font-weight:bold; cursor:pointer; border-radius:5px;">离开黑市</button>
     </div>
 
     <div id="msg"></div>
@@ -42,99 +44,131 @@
     <script src="node_modules/@tweenjs/tween.js/dist/tween.umd.js"></script>
 
     <script>
-        // --- 1. 初始化引擎 ---
+        // --- 1. 核心场景设置 ---
         const scene = new THREE.Scene();
         const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
         const renderer = new THREE.WebGLRenderer({ antialias: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(window.devicePixelRatio);
         document.body.appendChild(renderer.domElement);
-        const light = new THREE.DirectionalLight(0xffffff, 1.5);
-        light.position.set(5, 10, 7.5);
-        scene.add(new THREE.AmbientLight(0x202020), light);
 
-        // --- 2. 存档系统 ---
-        let db, highScore = 0;
+        // 高级光影
+        const ambientLight = new THREE.AmbientLight(0x404040, 2); 
+        const mainLight = new THREE.DirectionalLight(0xffffff, 2);
+        mainLight.position.set(5, 10, 7.5);
+        scene.add(ambientLight, mainLight);
+
+        // --- 2. 存档与变量 ---
+        let db, highScore = 0, score = 0, coins = 0, hp = 100, ultEnergy = 0, timeScale = 1.0;
+        let isShopOpen = false, isGameOver = false, hasDrone = false, droneGroup;
+        const keys = {}, bullets = [], enemies = [], particles = [], asteroids = [], blackHoles = [];
+
         const dbReq = indexedDB.open("StarDominionDB", 1);
         dbReq.onupgradeneeded = e => e.target.result.createObjectStore("saveData");
         dbReq.onsuccess = e => { 
             db = e.target.result; 
-            const store = db.transaction("saveData").objectStore("saveData");
-            store.get("highScore").onsuccess = ev => { 
+            db.transaction("saveData").objectStore("saveData").get("highScore").onsuccess = ev => {
                 highScore = ev.target.result || 0;
                 document.getElementById('medals').innerText = "历史最高: " + highScore;
             };
         };
 
-        // --- 3. 核心变量 ---
-        const player = new THREE.Group();
-        const body = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.3, 2), new THREE.MeshPhongMaterial({ color: 0x00ccff }));
-        player.add(body); scene.add(player);
-        camera.position.set(0, 12, 18); camera.lookAt(0, 0, 0);
+        // --- 3. 高级 3D 模型工厂 ---
 
-        let score = 0, coins = 0, hp = 100, ultEnergy = 0, timeScale = 1.0;
-        let isShopOpen = false, isGameOver = false, hasDrone = false, drone;
-        const keys = {}, bullets = [], enemies = [], particles = [], asteroids = [], blackHoles = [], homingMissiles = [];
+        // 创建玩家战机：拥有座舱、机翼和双炮管
+        function createPlayerShip() {
+            const group = new THREE.Group();
+            const mat = new THREE.MeshPhongMaterial({ color: 0x00aaff, shininess: 100 });
+            const glassMat = new THREE.MeshPhongMaterial({ color: 0x333333, transparent: true, opacity: 0.7 });
 
-        // --- 4. 功能函数模块 ---
-        function createExplosion(pos, color = 0xffaa00) {
-            for(let i=0; i<15; i++) {
-                const p = new THREE.Mesh(new THREE.SphereGeometry(0.15), new THREE.MeshBasicMaterial({ color }));
-                p.position.copy(pos);
-                p.userData = { vel: new THREE.Vector3((Math.random()-0.5)*0.5, (Math.random()-0.5)*0.5, (Math.random()-0.5)*0.5), life: 1.0 };
-                scene.add(p); particles.push(p);
-            }
+            // 机身
+            const body = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.8, 4, 8), mat);
+            body.rotation.x = Math.PI/2;
+            group.add(body);
+
+            // 座舱盖
+            const cockpit = new THREE.Mesh(new THREE.SphereGeometry(0.4, 16, 16, 0, Math.PI * 2, 0, Math.PI / 2), glassMat);
+            cockpit.position.set(0, 0.4, 0.2);
+            cockpit.scale.set(1, 0.6, 1.5);
+            group.add(cockpit);
+
+            // 机翼
+            const wingGeo = new THREE.BoxGeometry(5, 0.1, 1.5);
+            const wing = new THREE.Mesh(wingGeo, mat);
+            wing.position.set(0, 0, 0.5);
+            group.add(wing);
+
+            // 尾翼
+            const tail = new THREE.Mesh(new THREE.BoxGeometry(0.1, 1.2, 0.8), mat);
+            tail.position.set(0, 0.6, 1.5);
+            group.add(tail);
+
+            // 双炮管
+            const gunGeo = new THREE.CylinderGeometry(0.1, 0.1, 1, 8);
+            const gunL = new THREE.Mesh(gunGeo, new THREE.MeshPhongMaterial({color:0x333}));
+            const gunR = gunL.clone();
+            gunL.position.set(-1.2, -0.1, -0.5); gunL.rotation.x = Math.PI/2;
+            gunR.position.set(1.2, -0.1, -0.5); gunR.rotation.x = Math.PI/2;
+            group.add(gunL, gunR);
+
+            // 引擎火光
+            const fire = new THREE.Mesh(new THREE.ConeGeometry(0.4, 1.5, 8), new THREE.MeshBasicMaterial({color:0x00ffff}));
+            fire.position.set(0, 0, 2.5); fire.rotation.x = -Math.PI/2;
+            group.add(fire);
+            group.userData.fire = fire;
+
+            return group;
         }
+
+        // 创建精英敌机：锐利结构
+        function createEnemyShip() {
+            const group = new THREE.Group();
+            const mat = new THREE.MeshPhongMaterial({ color: 0xff2200 });
+            const body = new THREE.Mesh(new THREE.TetrahedronGeometry(1.5), mat);
+            group.add(body);
+            const spike = new THREE.Mesh(new THREE.ConeGeometry(0.3, 3, 8), mat);
+            spike.rotation.x = Math.PI/2; spike.position.z = -1;
+            group.add(spike);
+            return group;
+        }
+
+        const player = createPlayerShip();
+        scene.add(player);
+        camera.position.set(0, 15, 20);
+        camera.lookAt(0, 0, 0);
+
+        // --- 4. 游戏逻辑模块 ---
 
         function spawnEnemy() {
             if (isGameOver || isShopOpen) return;
-            const isElite = Math.random() > 0.8;
-            const geo = isElite ? new THREE.OctahedronGeometry(1.5) : new THREE.BoxGeometry(1,1,1);
-            const en = new THREE.Mesh(geo, new THREE.MeshPhongMaterial({ color: isElite ? 0xff00ff : 0xff3300 }));
-            en.position.set(Math.random()*40-20, 0, -50);
-            en.userData = { hp: isElite ? 5 : 1, type: isElite ? 'elite' : 'normal' };
-            if(isElite) { // 盾卫舰特效
-                const s = new THREE.Mesh(new THREE.SphereGeometry(2.5), new THREE.MeshBasicMaterial({ color: 0x00ffff, transparent: true, opacity: 0.2 }));
-                en.add(s); en.userData.shield = s;
-            }
+            const en = createEnemyShip();
+            en.position.set(Math.random()*40-20, 0, -60);
+            en.userData = { hp: 2 };
             scene.add(en); enemies.push(en);
         }
-        setInterval(spawnEnemy, 1200);
+        setInterval(spawnEnemy, 1500);
 
         function shoot() {
-            const b = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 1), new THREE.MeshBasicMaterial({ color: 0xff0000 }));
-            b.rotation.x = Math.PI/2; b.position.copy(player.position);
+            const bGeo = new THREE.SphereGeometry(0.2);
+            const bMat = new THREE.MeshBasicMaterial({ color: 0xff0000 });
+            const b = new THREE.Mesh(bGeo, bMat);
+            b.position.copy(player.position);
             scene.add(b); bullets.push(b);
         }
 
-        function shootBlackHole() {
-            if(coins < 100) return; coins -= 100;
-            const bh = new THREE.Mesh(new THREE.SphereGeometry(1), new THREE.MeshBasicMaterial({ color: 0x6600ff }));
-            bh.position.copy(player.position); bh.userData = { life: 3.0 };
-            scene.add(bh); blackHoles.push(bh); updateUI();
-        }
-
-        function releaseOmegaFlash() {
-            if(ultEnergy < 100) return; ultEnergy = 0;
-            const f = document.createElement('div'); f.style.cssText = "position:fixed;inset:0;background:white;z-index:1000;";
-            document.body.appendChild(f); setTimeout(()=>f.remove(), 100);
-            enemies.forEach(en => { createExplosion(en.position, 0xffffff); scene.remove(en); });
-            enemies.length = 0; score += 2000; updateUI();
+        function toggleShop() {
+            isShopOpen = !isShopOpen;
+            document.getElementById('shop-overlay').style.display = isShopOpen ? 'flex' : 'none';
+            document.getElementById('shop-coins').innerText = "金币: " + coins;
         }
 
         function buyUpgrade(type) {
-            if(type === 'hp' && coins >= 200) { coins -= 200; hp = 100; }
-            else if(type === 'drone' && coins >= 1000 && !hasDrone) { 
+            if(type === 'hp' && coins >= 200) { coins -= 200; hp = 100; updateUI(); }
+            else if(type === 'drone' && coins >= 1000 && !hasDrone) {
                 coins -= 1000; hasDrone = true;
-                drone = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.1, 0.4), new THREE.MeshBasicMaterial({ color: 0xffffff }));
-                scene.add(drone);
+                droneGroup = new THREE.Mesh(new THREE.SphereGeometry(0.5), new THREE.MeshPhongMaterial({color:0xffffff}));
+                scene.add(droneGroup); updateUI();
             }
-            updateUI();
-        }
-
-        function toggleShop() { 
-            isShopOpen = !isShopOpen; 
-            document.getElementById('shop-overlay').style.display = isShopOpen ? 'flex' : 'none';
-            document.getElementById('shop-coins').innerText = "金币: " + coins;
         }
 
         function updateUI() {
@@ -144,15 +178,29 @@
             document.getElementById('ult-fill').style.width = ultEnergy + "%";
         }
 
-        // --- 5. 主循环 ---
+        function createExplosion(pos, color = 0xff8800) {
+            for(let i=0; i<20; i++) {
+                const p = new THREE.Mesh(new THREE.BoxGeometry(0.2,0.2,0.2), new THREE.MeshBasicMaterial({color}));
+                p.position.copy(pos);
+                p.userData = { vel: new THREE.Vector3((Math.random()-0.5), (Math.random()-0.5), (Math.random()-0.5)), life: 1.0 };
+                scene.add(p); particles.push(p);
+            }
+        }
+
+        // --- 5. 循环与交互 ---
+
         window.addEventListener('keydown', e => {
             keys[e.code] = true;
             if(e.code === 'Space') shoot();
-            if(e.code === 'KeyR') shootBlackHole();
-            if(e.code === 'KeyX') releaseOmegaFlash();
             if(e.code === 'KeyB') toggleShop();
+            if(e.code === 'KeyX' && ultEnergy >= 100) {
+                ultEnergy = 0; score += 5000; updateUI();
+                enemies.forEach(en => { createExplosion(en.position, 0xffffff); scene.remove(en); });
+                enemies.length = 0;
+                document.body.style.background = "#fff"; setTimeout(()=>document.body.style.background="#000", 100);
+            }
             if(e.code === 'KeyE' && !isShopOpen) {
-                timeScale = 0.1; document.body.style.filter = "hue-rotate(180deg)";
+                timeScale = 0.1; document.body.style.filter = "invert(1) hue-rotate(180deg)";
                 setTimeout(() => { timeScale = 1.0; document.body.style.filter = "none"; }, 4000);
             }
         });
@@ -163,78 +211,67 @@
             if(isGameOver || isShopOpen) return;
             TWEEN.update(time);
 
-            // 移动玩家
-            const ps = 0.3;
-            if(keys['KeyW']) player.position.z -= ps; if(keys['KeyS']) player.position.z += ps;
-            if(keys['KeyA']) player.position.x -= ps; if(keys['KeyD']) player.position.x += ps;
-            player.position.x = THREE.MathUtils.clamp(player.position.x, -20, 20);
+            // 战机移动
+            const ps = 0.35;
+            if(keys['KeyW']) player.position.z -= ps;
+            if(keys['KeyS']) player.position.z += ps;
+            if(keys['KeyA']) { player.position.x -= ps; player.rotation.z = 0.5; }
+            else if(keys['KeyD']) { player.position.x += ps; player.rotation.z = -0.5; }
+            else { player.rotation.z = 0; }
+            player.position.x = THREE.MathUtils.clamp(player.position.x, -22, 22);
+            
+            // 引擎火光动画
+            player.userData.fire.scale.set(1, 1 + Math.sin(time*0.01)*0.3, 1);
 
-            // 僚机
-            if(hasDrone && drone) {
-                drone.position.set(player.position.x + Math.sin(time*0.005)*3, 0, player.position.z + Math.cos(time*0.005)*3);
+            // 僚机动画
+            if(hasDrone) {
+                droneGroup.position.set(player.position.x + Math.sin(time*0.005)*4, 0, player.position.z + Math.cos(time*0.005)*4);
             }
 
-            // 黑洞引力
-            blackHoles.forEach((bh, bhi) => {
-                bh.position.z -= 0.1 * timeScale; bh.userData.life -= 0.016;
-                enemies.forEach(en => {
-                    if(en.position.distanceTo(bh.position) < 12) {
-                        en.position.lerp(bh.position, 0.05 * timeScale);
-                        if(en.userData.shield) en.userData.shield.visible = false;
-                    }
-                });
-                if(bh.userData.life <= 0) { scene.remove(bh); blackHoles.splice(bhi, 1); }
-            });
-
-            // 敌人与子弹碰撞
+            // 子弹与碰撞
             bullets.forEach((b, bi) => {
-                b.position.z -= 1.0 * timeScale;
+                b.position.z -= 1.2 * timeScale;
                 enemies.forEach((en, ei) => {
-                    if(b.position.distanceTo(en.position) < (en.userData.shield?.visible ? 3 : 1.5)) {
-                        if(en.userData.shield?.visible) { createExplosion(b.position, 0x00ffff); }
-                        else {
-                            en.userData.hp--; 
-                            if(en.userData.hp <= 0) {
-                                createExplosion(en.position); scene.remove(en); enemies.splice(ei, 1);
-                                score += 100; coins += 50; ultEnergy = Math.min(100, ultEnergy + 5);
-                                if(en.userData.type === 'elite') { // 电影感特写
-                                    timeScale = 0.05; setTimeout(()=>timeScale=1.0, 500);
-                                }
-                            }
-                        }
-                        scene.remove(b); bullets.splice(bi, 1); updateUI();
+                    if(b.position.distanceTo(en.position) < 2) {
+                        createExplosion(en.position);
+                        scene.remove(en); enemies.splice(ei, 1);
+                        scene.remove(b); bullets.splice(bi, 1);
+                        score += 100; coins += 50; ultEnergy = Math.min(100, ultEnergy + 4);
+                        updateUI();
+                        // 电影特写
+                        timeScale = 0.1; setTimeout(()=>timeScale=1.0, 300);
                     }
                 });
             });
 
             enemies.forEach((en, ei) => {
-                en.position.z += 0.2 * timeScale;
-                if(en.position.distanceTo(player.position) < 2) {
+                en.position.z += 0.25 * timeScale;
+                en.rotation.y += 0.02 * timeScale;
+                if(en.position.distanceTo(player.position) < 2.5) {
                     hp -= 20; updateUI(); scene.remove(en); enemies.splice(ei, 1);
-                    if(hp <= 0) { 
-                        isGameOver = true; 
-                        if(score > highScore) {
-                            const tx = db.transaction("saveData", "readwrite");
-                            tx.objectStore("saveData").put(score, "highScore");
-                        }
-                        alert("游戏结束！最终得分: " + score); location.reload();
+                    if(hp <= 0) {
+                        isGameOver = true;
+                        if(score > highScore) db.transaction("saveData", "readwrite").objectStore("saveData").put(score, "highScore");
+                        alert("指挥官，战机已坠毁！得分: " + score); location.reload();
                     }
                 }
             });
 
             particles.forEach((p, pi) => {
-                p.position.add(p.userData.vel); p.userData.life -= 0.02;
+                p.position.addScaledVector(p.userData.vel, timeScale);
+                p.userData.life -= 0.02;
                 if(p.userData.life <= 0) { scene.remove(p); particles.splice(pi, 1); }
             });
 
             renderer.render(scene, camera);
         }
+
         animate();
         window.onresize = () => {
-            camera.aspect = window.innerWidth / window.innerHeight; camera.updateProjectionMatrix();
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
             renderer.setSize(window.innerWidth, window.innerHeight);
         };
     </script>
 </body>
 </html>
-
